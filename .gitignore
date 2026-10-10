@@ -1,0 +1,58 @@
+HELP.md
+.gradle
+build/
+.gradle-user-home/
+build-cache/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### macOS ###
+.DS_Store
+
+### Logs ###
+*.log
+
+### Secretos — nunca versionar credenciales ###
+# La app necesita UCOPET_JWT_SECRET por variable de entorno.
+# El .env se queda en cada maquina, nunca en el repo.
+.env
+.env.*
+!.env.example
+# Opcional, para quien lo quiera: Spring Boot lee config/application.properties
+# y le gana al del repo. Sirve para fijar UCOPET_JWT_SECRET en la propia maquina
+# y que los tokens sobrevivan a los reinicios. Nunca se versiona.
+# La barra inicial es obligatoria: sin ella tambien ignoraria el paquete
+# src/main/java/com/uco/ucopetapi/config/
+/config/
