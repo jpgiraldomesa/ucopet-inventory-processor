@@ -24,20 +24,12 @@ Consola en http://localhost:15672 (`guest` / `guest`).
 ## Como se corre
 
 ```bash
-UCOPET_DB_PASSWORD=la-clave-de-postgres ./gradlew bootRun
+./gradlew bootRun
 ```
 
-**Ningun secreto esta escrito en el repo.** Todo sale de variables de entorno, y
-`UCOPET_DB_PASSWORD` no tiene valor por defecto a proposito: sin ella no arranca.
-
-| Variable | Default |
-|---|---|
-| `UCOPET_DB_URL` | `jdbc:postgresql://localhost:5432/ucopetdb` |
-| `UCOPET_DB_USER` | `postgres` |
-| `UCOPET_DB_PASSWORD` | *(sin default)* |
-| `UCOPET_RABBIT_HOST` · `UCOPET_RABBIT_PORT` | `localhost` · `5672` |
-| `UCOPET_RABBIT_USER` · `UCOPET_RABBIT_PASSWORD` | `guest` · `guest` |
-| `UCOPET_INVENTORY_PORT` · `UCOPET_INVENTORY_ADDRESS` | `8084` · `127.0.0.1` |
+La configuracion va escrita en `application.properties`, igual que en `ucopetapi`: Postgres en
+`localhost:5432/ucopetdb` con `postgres`, Rabbit en `localhost:5672` con `guest`, y el procesador
+en `127.0.0.1:8084`. No hay variables de entorno: si tu Postgres usa otra clave, se cambia ahi.
 
 ```bash
 curl http://127.0.0.1:8084/actuator/health      # {"status":"UP"} si llega a Postgres y Rabbit
@@ -46,7 +38,7 @@ curl http://127.0.0.1:8084/actuator/health      # {"status":"UP"} si llega a Pos
 ## Como se prueba
 
 ```bash
-UCOPET_DB_PASSWORD=la-clave-de-postgres ./gradlew test
+./gradlew test
 ```
 
 Las pruebas son **de integracion de verdad**: levantan el contexto, publican en el exchange real y
