@@ -1,5 +1,6 @@
 package com.uco.ucopetinventory.messaging;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -73,10 +74,10 @@ class InventoryReceiversTest {
                 .orElseThrow(() -> new AssertionError("el alta no llego a la base en " + TIMEOUT));
         assertThat(created.getType()).isEqualTo(CatalogItemType.PRODUCT);
         assertThat(created.getActive()).isTrue();
-        assertThat(created.getPrice()).isEqualTo(7700);
+        assertThat(created.getPrice()).isEqualByComparingTo("7700");
 
         publish("inventory.product.save", item("PRODUCT", "Producto por el bus", 9900));
-        assertThat(waitFor(() -> itemRepository.findById(itemId).filter(item -> item.getPrice() == 9900)))
+        assertThat(waitFor(() -> itemRepository.findById(itemId).filter(item -> item.getPrice().compareTo(BigDecimal.valueOf(9900)) == 0)))
                 .as("el segundo save tiene que actualizar el precio")
                 .isPresent();
     }

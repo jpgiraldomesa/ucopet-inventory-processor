@@ -1,5 +1,6 @@
 package com.uco.ucopetinventory.domain.catalog;
 
+import java.math.BigDecimal;
 import com.uco.ucopetinventory.domain.catalog.enums.CatalogCategory;
 import com.uco.ucopetinventory.domain.catalog.enums.CatalogItemType;
 import com.uco.ucopetinventory.domain.catalog.enums.TaxCategory;
@@ -32,7 +33,8 @@ public class CatalogItemDomain {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    private Integer price;
+    @Column(precision = 15, scale = 2)
+    private BigDecimal price;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tax_category", nullable = false, length = 20)
@@ -98,11 +100,11 @@ public class CatalogItemDomain {
         this.imageUrl = imageUrl;
     }
 
-    public Integer getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(final Integer price) {
+    public void setPrice(final BigDecimal price) {
         this.price = price;
     }
 
