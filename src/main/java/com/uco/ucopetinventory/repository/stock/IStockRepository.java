@@ -15,7 +15,7 @@ public interface IStockRepository extends JpaRepository<StockDomain, UUID> {
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE StockDomain s SET s.quantity = s.quantity + :quantity "
-            + "WHERE s.itemId = :productId AND s.headquarterId = :headquarterId "
+            + "WHERE s.productId = :productId AND s.headquarterId = :headquarterId "
             + "AND s.quantity + :quantity >= 0")
     int addQuantity(@Param("productId") UUID productId,
                     @Param("headquarterId") UUID headquarterId,

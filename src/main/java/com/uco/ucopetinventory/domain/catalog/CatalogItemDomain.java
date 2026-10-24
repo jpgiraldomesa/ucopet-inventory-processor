@@ -4,6 +4,7 @@ import com.uco.ucopetinventory.domain.catalog.enums.CatalogCategory;
 import com.uco.ucopetinventory.domain.catalog.enums.CatalogItemType;
 import com.uco.ucopetinventory.domain.catalog.enums.TaxCategory;
 
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -12,6 +13,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "products")
@@ -53,6 +55,9 @@ public class CatalogItemDomain {
     @Column(name = "purchasable")
     private Boolean purchasable;
 
+    @Transient
+    private List<UUID> headquarterIds;
+
     protected CatalogItemDomain() {
     }
 
@@ -63,6 +68,10 @@ public class CatalogItemDomain {
 
     public UUID getId() {
         return id;
+    }
+
+    public void setId(final UUID id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -125,6 +134,10 @@ public class CatalogItemDomain {
         return type;
     }
 
+    public void setType(final CatalogItemType type) {
+        this.type = type;
+    }
+
     public CatalogCategory getCategory() {
         return category;
     }
@@ -139,5 +152,13 @@ public class CatalogItemDomain {
 
     public void setPurchasable(final Boolean purchasable) {
         this.purchasable = purchasable;
+    }
+
+    public List<UUID> getHeadquarterIds() {
+        return headquarterIds;
+    }
+
+    public void setHeadquarterIds(final List<UUID> headquarterIds) {
+        this.headquarterIds = headquarterIds;
     }
 }

@@ -1,8 +1,7 @@
 package com.uco.ucopetinventory.service.stock;
 
-import com.uco.ucopetinventory.dto.stock.StockCommand;
+import com.uco.ucopetinventory.domain.stock.StockDomain;
 import com.uco.ucopetinventory.repository.stock.IStockRepository;
-import com.uco.ucopetinventory.util.UnprocessableCommandException;
 
 import java.util.UUID;
 
@@ -19,25 +18,25 @@ public class StockService {
     }
 
     @Transactional
-    public void adjust(StockCommand command) {
-        if (command.productId() == null || command.headquarterId() == null) {
-            throw new UnprocessableCommandException("El ajuste de stock necesita producto y sede");
+    public void adjust(StockDomain message) {
+        if (message.getProductId() == null || message.getHeadquarterId() == null) {
+            throw new IllegalArgumentException("El ajuste de stock necesita producto y sede");
         }
-        if (command.quantity() == null || command.quantity() == 0) {
-            throw new UnprocessableCommandException("La cantidad a ajustar no puede ser nula ni cero");
+        if (message.getQuantity() == null || message.getQuantity() == 0) {
+            throw new IllegalArgumentException("La cantidad a ajustar no puede ser nula ni cero");
         }
-        if (stockRepository.addQuantity(command.productId(), command.headquarterId(), command.quantity()) == 0) {
-            createOrReject(command);
+        if (stockRepository.addQuantity(message.getProductId(), message.getHeadquarterId(), message.getQuantity()) == 0) {
+            createOrReject(message);
         }
     }
 
-    private void createOrReject(StockCommand command) {
-        if (command.quantity() > 0) {
+    private void createOrReject(StockDomain message) {
+        if (message.getQuantity() > 0) {
             stockRepository.createOrAddQuantity(
-                    UUID.randomUUID(), command.productId(), command.headquarterId(), command.quantity());
+                    UUID.randomUUID(), message.getProductId(), message.getHeadquarterId(), message.getQuantity());
             return;
         }
-        throw new UnprocessableCommandException(
+        throw new IllegalArgumentException(
                 "La operacion dejaria el stock en negativo, o no existe stock de ese producto en esa sede");
     }
 }

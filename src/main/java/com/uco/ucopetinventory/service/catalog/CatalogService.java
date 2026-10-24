@@ -3,13 +3,11 @@ package com.uco.ucopetinventory.service.catalog;
 import com.uco.ucopetinventory.domain.catalog.CatalogItemDomain;
 import com.uco.ucopetinventory.domain.catalog.CatalogItemHeadquarterDomain;
 import com.uco.ucopetinventory.domain.catalog.enums.CatalogItemType;
-import com.uco.ucopetinventory.dto.catalog.CatalogItemCommand;
 import com.uco.ucopetinventory.repository.catalog.ICatalogItemHeadquarterRepository;
 import com.uco.ucopetinventory.repository.catalog.ICatalogItemRepository;
-import com.uco.ucopetinventory.util.UnprocessableCommandException;
-
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,72 +24,86 @@ public class CatalogService {
     }
 
     @Transactional
-    public void create(CatalogItemType type, CatalogItemCommand command) {
-        requireId(command.id());
-        CatalogItemDomain item = new CatalogItemDomain(command.id(), type);
-        item.setName(command.name());
-        item.setDescription(command.description());
-        item.setImageUrl(command.imageUrl());
-        item.setTaxCategory(command.taxCategory());
-        item.setSellable(command.sellable());
-        item.setCategory(command.category());
-        item.setActive(true);
-        item.setPrice(Boolean.TRUE.equals(command.sellable()) ? command.price() : null);
-        if (type == CatalogItemType.SERVICE) {
-            item.setPurchasable(command.purchasable());
+    public void save(CatalogItemType type, CatalogItemDomain message) {
+        if (message == null || message.getId() == null) {
+            throw new IllegalArgumentException("El mensaje no trae el id: lo asigna la API antes de publicar");
         }
-        itemRepository.save(item);
-        if (type == CatalogItemType.SERVICE) {
-            replaceHeadquarters(command.id(), command.headquarterIds());
+        Optional<CatalogItemDomain> existing = itemRepository.findById(message.getId());
+        if (existing.isPresent()) {
+            if (existing.get().getType() != type) {
+                throw new IllegalArgumentException("El id " + message.getId() + " ya pertenece a otro tipo de item");
+            }
+            update(existing.get(), type, message);
+        } else {
+            create(type, message);
         }
     }
 
     @Transactional
-    public void update(CatalogItemType type, CatalogItemCommand command) {
-        requireId(command.id());
-        CatalogItemDomain item = findOrThrow(type, command.id());
-        if (command.name() != null) {
-            item.setName(command.name());
+    public void deactivate(CatalogItemType type, UUID id) {
+        if (id == null) {
+            throw new IllegalArgumentException("El mensaje no trae el id del item a dar de baja");
         }
-        if (command.description() != null) {
-            item.setDescription(command.description());
+        CatalogItemDomain item = itemRepository.findByIdAndType(id, type)
+                .orElseThrow(() -> new IllegalArgumentException("No existe un " + type + " con id " + id));
+        item.setActive(false);
+        itemRepository.save(item);
+    }
+
+    private void create(CatalogItemType type, CatalogItemDomain message) {
+        CatalogItemDomain item = new CatalogItemDomain(message.getId(), type);
+        item.setName(message.getName());
+        item.setDescription(message.getDescription());
+        item.setImageUrl(message.getImageUrl());
+        item.setTaxCategory(message.getTaxCategory());
+        item.setSellable(message.getSellable());
+        item.setCategory(message.getCategory());
+        item.setActive(true);
+        item.setPrice(Boolean.TRUE.equals(message.getSellable()) ? message.getPrice() : null);
+        if (type == CatalogItemType.SERVICE) {
+            item.setPurchasable(message.getPurchasable());
         }
-        if (command.imageUrl() != null) {
-            item.setImageUrl(command.imageUrl());
+        itemRepository.save(item);
+        if (type == CatalogItemType.SERVICE) {
+            replaceHeadquarters(message.getId(), message.getHeadquarterIds());
         }
-        if (command.price() != null) {
-            item.setPrice(command.price());
+    }
+
+    private void update(CatalogItemDomain item, CatalogItemType type, CatalogItemDomain message) {
+        if (message.getName() != null) {
+            item.setName(message.getName());
         }
-        if (command.taxCategory() != null) {
-            item.setTaxCategory(command.taxCategory());
+        if (message.getDescription() != null) {
+            item.setDescription(message.getDescription());
         }
-        if (command.sellable() != null) {
-            item.setSellable(command.sellable());
+        if (message.getImageUrl() != null) {
+            item.setImageUrl(message.getImageUrl());
         }
-        if (command.category() != null) {
-            item.setCategory(command.category());
+        if (message.getPrice() != null) {
+            item.setPrice(message.getPrice());
         }
-        if (type == CatalogItemType.SERVICE && command.purchasable() != null) {
-            item.setPurchasable(command.purchasable());
+        if (message.getTaxCategory() != null) {
+            item.setTaxCategory(message.getTaxCategory());
+        }
+        if (message.getSellable() != null) {
+            item.setSellable(message.getSellable());
+        }
+        if (message.getCategory() != null) {
+            item.setCategory(message.getCategory());
+        }
+        if (type == CatalogItemType.SERVICE && message.getPurchasable() != null) {
+            item.setPurchasable(message.getPurchasable());
         }
         if (!Boolean.TRUE.equals(item.getSellable())) {
             item.setPrice(null);
         }
         itemRepository.save(item);
-        if (type == CatalogItemType.SERVICE && command.headquarterIds() != null) {
-            replaceHeadquarters(item.getId(), command.headquarterIds());
+        if (type == CatalogItemType.SERVICE && message.getHeadquarterIds() != null) {
+            replaceHeadquarters(item.getId(), message.getHeadquarterIds());
         }
     }
 
-    @Transactional
-    public void deactivate(CatalogItemType type, CatalogItemCommand command) {
-        requireId(command.id());
-        CatalogItemDomain item = findOrThrow(type, command.id());
-        item.setActive(false);
-        itemRepository.save(item);
-    }
-
-    private void replaceHeadquarters(UUID itemId, java.util.List<UUID> headquarterIds) {
+    private void replaceHeadquarters(UUID itemId, List<UUID> headquarterIds) {
         headquarterRepository.deleteByItemId(itemId);
         if (headquarterIds == null) {
             return;
@@ -99,18 +111,6 @@ public class CatalogService {
         for (UUID headquarterId : headquarterIds) {
             headquarterRepository.save(new CatalogItemHeadquarterDomain(
                     UUID.randomUUID(), itemId, headquarterId));
-        }
-    }
-
-    private CatalogItemDomain findOrThrow(CatalogItemType type, UUID id) {
-        return itemRepository.findByIdAndType(id, type)
-                .orElseThrow(() -> new UnprocessableCommandException(
-                        "No existe un " + type + " con id " + id));
-    }
-
-    private static void requireId(UUID id) {
-        if (id == null) {
-            throw new UnprocessableCommandException("El comando llego sin id: lo asigna la API antes de publicar");
         }
     }
 }

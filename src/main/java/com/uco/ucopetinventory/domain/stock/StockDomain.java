@@ -17,7 +17,7 @@ public class StockDomain {
     private UUID id;
 
     @Column(name = "product_id", nullable = false, updatable = false)
-    private UUID itemId;
+    private UUID productId;
 
     @Column(name = "headquarter_id", nullable = false, updatable = false)
     private UUID headquarterId;
@@ -32,15 +32,31 @@ public class StockDomain {
         return id;
     }
 
-    public UUID getItemId() {
-        return itemId;
+    public void setId(final UUID id) {
+        this.id = id;
+    }
+
+    public UUID getProductId() {
+        return productId;
+    }
+
+    public void setProductId(final UUID productId) {
+        this.productId = productId;
     }
 
     public UUID getHeadquarterId() {
         return headquarterId;
     }
 
+    public void setHeadquarterId(final UUID headquarterId) {
+        this.headquarterId = headquarterId;
+    }
+
     public Integer getQuantity() {
         return quantity;
+    }
+
+    public void setQuantity(final Integer quantity) {
+        this.quantity = quantity;
     }
 }
