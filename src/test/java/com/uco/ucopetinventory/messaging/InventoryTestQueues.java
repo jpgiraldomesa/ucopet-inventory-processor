@@ -27,7 +27,8 @@ public class InventoryTestQueues {
     public Declarables inventoryQueues(Environment environment) {
         List<Declarable> declarables = new ArrayList<>();
         for (String key : KEYS) {
-            DirectExchange exchange = new DirectExchange(environment.getRequiredProperty(key + ".exchange-name"), true, false);
+            DirectExchange exchange = new DirectExchange(
+                    environment.getRequiredProperty(key + ".exchange-name"), true, false);
             Queue queue = QueueBuilder.durable(environment.getRequiredProperty(key + ".queue-name")).build();
             declarables.add(exchange);
             declarables.add(queue);

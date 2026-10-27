@@ -1,24 +1,15 @@
-package com.uco.ucopetinventory.domain.catalog;
+package com.uco.ucopetinventory.domain.product;
 
-import java.math.BigDecimal;
-import com.uco.ucopetinventory.domain.catalog.enums.CatalogCategory;
-import com.uco.ucopetinventory.domain.catalog.enums.CatalogItemType;
-import com.uco.ucopetinventory.domain.catalog.enums.TaxCategory;
-
-import java.util.List;
-import java.util.UUID;
-
+import com.uco.ucopetinventory.domain.product.enums.TaxCategory;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
+import jakarta.persistence.MappedSuperclass;
+import java.util.UUID;
 
-@Entity
-@Table(name = "products")
-public class CatalogItemDomain {
+@MappedSuperclass
+public abstract class CatalogItemDomain {
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -33,8 +24,7 @@ public class CatalogItemDomain {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    @Column(precision = 15, scale = 2)
-    private BigDecimal price;
+    private Integer price;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tax_category", nullable = false, length = 20)
@@ -46,26 +36,7 @@ public class CatalogItemDomain {
     @Column(nullable = false)
     private Boolean active;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 20)
-    private CatalogItemType type;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "category", length = 30)
-    private CatalogCategory category;
-
-    @Column(name = "purchasable")
-    private Boolean purchasable;
-
-    @Transient
-    private List<UUID> headquarterIds;
-
     protected CatalogItemDomain() {
-    }
-
-    public CatalogItemDomain(final UUID id, final CatalogItemType type) {
-        this.id = id;
-        this.type = type;
     }
 
     public UUID getId() {
@@ -100,11 +71,11 @@ public class CatalogItemDomain {
         this.imageUrl = imageUrl;
     }
 
-    public BigDecimal getPrice() {
+    public Integer getPrice() {
         return price;
     }
 
-    public void setPrice(final BigDecimal price) {
+    public void setPrice(final Integer price) {
         this.price = price;
     }
 
@@ -130,37 +101,5 @@ public class CatalogItemDomain {
 
     public void setActive(final Boolean active) {
         this.active = active;
-    }
-
-    public CatalogItemType getType() {
-        return type;
-    }
-
-    public void setType(final CatalogItemType type) {
-        this.type = type;
-    }
-
-    public CatalogCategory getCategory() {
-        return category;
-    }
-
-    public void setCategory(final CatalogCategory category) {
-        this.category = category;
-    }
-
-    public Boolean getPurchasable() {
-        return purchasable;
-    }
-
-    public void setPurchasable(final Boolean purchasable) {
-        this.purchasable = purchasable;
-    }
-
-    public List<UUID> getHeadquarterIds() {
-        return headquarterIds;
-    }
-
-    public void setHeadquarterIds(final List<UUID> headquarterIds) {
-        this.headquarterIds = headquarterIds;
     }
 }

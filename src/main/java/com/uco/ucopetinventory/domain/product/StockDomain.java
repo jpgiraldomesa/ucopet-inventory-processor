@@ -1,4 +1,4 @@
-package com.uco.ucopetinventory.domain.stock;
+package com.uco.ucopetinventory.domain.product;
 
 import java.util.UUID;
 
@@ -26,6 +26,13 @@ public class StockDomain {
     private Integer quantity;
 
     protected StockDomain() {
+    }
+
+    public StockDomain(final UUID id, final UUID productId, final UUID headquarterId, final Integer quantity) {
+        this.id = id;
+        this.productId = productId;
+        this.headquarterId = headquarterId;
+        this.quantity = quantity;
     }
 
     public UUID getId() {

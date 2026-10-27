@@ -1,32 +1,31 @@
-package com.uco.ucopetinventory.domain.catalog;
-
-import java.util.UUID;
+package com.uco.ucopetinventory.domain.product;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 @Entity
 @Table(name = "service_headquarters")
-public class CatalogItemHeadquarterDomain {
+public class ServiceHeadquarterDomain {
 
     @Id
     @Column(nullable = false, updatable = false)
     private UUID id;
 
     @Column(name = "service_id", nullable = false, updatable = false)
-    private UUID itemId;
+    private UUID serviceId;
 
     @Column(name = "headquarter_id", nullable = false, updatable = false)
     private UUID headquarterId;
 
-    protected CatalogItemHeadquarterDomain() {
+    protected ServiceHeadquarterDomain() {
     }
 
-    public CatalogItemHeadquarterDomain(final UUID id, final UUID itemId, final UUID headquarterId) {
+    public ServiceHeadquarterDomain(final UUID id, final UUID serviceId, final UUID headquarterId) {
         this.id = id;
-        this.itemId = itemId;
+        this.serviceId = serviceId;
         this.headquarterId = headquarterId;
     }
 
@@ -34,8 +33,8 @@ public class CatalogItemHeadquarterDomain {
         return id;
     }
 
-    public UUID getItemId() {
-        return itemId;
+    public UUID getServiceId() {
+        return serviceId;
     }
 
     public UUID getHeadquarterId() {

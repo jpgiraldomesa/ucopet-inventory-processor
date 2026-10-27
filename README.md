@@ -63,41 +63,57 @@ del profesor: **una clase receptora por cola**, el **JSON de la entidad** como c
 
 | Cola | Receptor | Que hace |
 |---|---|---|
-| `ucopet.inventory.product.save.qu` | `messaging/catalog/ProductSaveReceiverMessage` | `save`: si el producto existe lo actualiza, si no lo crea |
-| `ucopet.inventory.product.deactivate.qu` | `messaging/catalog/ProductDeactivationReceiverMessage` | lo da de baja |
-| `ucopet.inventory.service.save.qu` | `messaging/catalog/ServiceSaveReceiverMessage` | `save` del servicio, con sus sedes |
-| `ucopet.inventory.service.deactivate.qu` | `messaging/catalog/ServiceDeactivationReceiverMessage` | lo da de baja |
-| `ucopet.inventory.stock.adjust.qu` | `messaging/stock/StockAdjustReceiverMessage` | suma o resta; nunca deja el stock en negativo |
+| `ucopet.inventory.product.save.qu` | `messaging/product/ProductSaveReceiverMessage` | `save`: si el producto existe lo actualiza, si no lo crea |
+| `ucopet.inventory.product.deactivate.qu` | `messaging/product/ProductDeactivationReceiverMessage` | lo da de baja |
+| `ucopet.inventory.service.save.qu` | `messaging/product/ServiceSaveReceiverMessage` | `save` del servicio, con sus sedes |
+| `ucopet.inventory.service.deactivate.qu` | `messaging/product/ServiceDeactivationReceiverMessage` | lo da de baja |
+| `ucopet.inventory.stock.adjust.qu` | `messaging/product/StockAdjustReceiverMessage` | suma o resta; nunca deja el stock en negativo |
 
 Cada cola tiene su exchange `direct` y su routing key, con los nombres de
 `src/main/resources/inventory.properties`, que entra por `spring.config.import`. **Las colas las
 declara la API** (`config/product/*QueueConfig` en `ucopetapi`); el procesador solo escucha, y con
 `missing-queues-fatal=false` arranca aunque la API todavia no las haya creado.
 
-El cuerpo es el JSON del item, el mismo `CatalogItemDTO` que maneja la API, y entra directo a
-`CatalogItemDomain`:
+El cuerpo es el mismo DTO que maneja la API (`ProductDTO`, `ServiceDTO`), y entra directo a `ProductDomain` o
+`ServiceDomain`:
 
 ```json
-{ "id": "uuid", "type": "PRODUCT", "name": "Collar rojo", "price": 25000,
+{ "id": "uuid", "name": "Collar rojo", "price": 25000,
   "taxCategory": "STANDARD", "sellable": true, "active": true, "category": "GENERAL" }
 ```
 
-Para el stock: `{ "productId": "uuid", "headquarterId": "uuid", "quantity": -3 }`.
+Un servicio trae ademas `purchasable` y `headquarterIds`. Las bajas mandan el item actual; el procesador solo usa
+su `id`.
+
+Para el stock: `{ "productId": "uuid", "headquarterId": "uuid", "quantity": -3, "reason": "SALE", "note": "...",
+"performedBy": "uuid" }`, que entra directo a `StockMovementDomain`. Cada ajuste actualiza `stocks` y deja una fila en
+`stock_movements` (el historial: cantidad, saldo que quedo, motivo, nota, quien y cuando) en la misma transaccion. Si
+el saldo existia antes del historial, primero se guarda un movimiento `OPENING` con lo que habia.
 
 **El `id` lo asigna la API antes de publicar.** Si llega sin `id`, el mensaje se rechaza: el
 procesador escribe tarde y la API necesita responder con el id de inmediato.
 
-**Si un mensaje no se puede aplicar** (JSON invalido, sin id, un stock que quedaria negativo), el
-receptor lanza `AmqpRejectAndDontRequeueException`: se descarta y no se reintenta, igual que en el
-resto del equipo.
+**La API espera la respuesta** al guardar, dar de baja y ajustar stock (request-reply de Rabbit, con
+`sendAndReceive`). Si el mensaje trae `replyTo`, el receptor contesta con headers: `resultado` (`aplicado` o
+`rechazado`), `motivo`, `tipo=nombre-repetido` cuando choca el indice de nombre unico, y en el stock `cantidad` y
+`stockId`. Cada receptor procesa de a un mensaje (`concurrency = "1"`) y el stock se ajusta con `@Lock` sobre el
+producto, asi que dos ajustes nunca se pisan.
+
+**El header `plazo`** trae la hora limite en que la API deja de esperar. El cambio corre en un `TransactionTemplate`
+y, justo antes de confirmar, si el plazo ya vencio se deshace: un 503 de la API siempre significa que no se aplico.
+
+**Si un mensaje no se puede aplicar** (JSON invalido, sin id, un stock que quedaria negativo) y no trae `replyTo`,
+el receptor lanza `AmqpRejectAndDontRequeueException`: se descarta y no se reintenta, igual que en el resto del
+equipo.
 
 ## Estructura
 
-Capa primero y entidad despues, con el codigo **en ingles**: `messaging/catalog`, `messaging/stock`,
-`service/catalog`, `service/stock`, `domain/catalog`, `domain/stock` y `util/gson/MapperJsonObject`.
+Capa primero y entidad despues, con el codigo **en ingles**: `messaging/product`, `service/product`,
+`repository/product`, `domain/product` (productos, servicios y stock) y `util/gson/MapperJsonObject`.
 **No hay DTO:** como en el resto del equipo, el receptor convierte el JSON directo al domain
-(`CatalogItemDomain`, `StockDomain`). Las sedes de un servicio llegan en `headquarterIds`, un campo
-`@Transient` del domain, porque se guardan en su propia tabla.
+(`ProductDomain`, `ServiceDomain`, `StockDomain`, `StockMovementDomain`), con lo comun en `CatalogItemDomain`
+(`@MappedSuperclass`). Las sedes de un servicio llegan en `headquarterIds`, un campo `@Transient` de
+`ServiceDomain`, porque se guardan en `service_headquarters`.
 
 ## Alcance actual
 

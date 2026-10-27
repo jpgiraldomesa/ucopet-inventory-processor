@@ -1,4 +1,4 @@
-package com.uco.ucopetinventory.domain.catalog.enums;
+package com.uco.ucopetinventory.domain.product.enums;
 
 public enum TaxCategory {
     EXEMPT(0),
