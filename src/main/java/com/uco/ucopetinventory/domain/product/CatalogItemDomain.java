@@ -6,6 +6,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @MappedSuperclass
@@ -24,7 +25,8 @@ public abstract class CatalogItemDomain {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    private Integer price;
+    @Column(precision = 15, scale = 2)
+    private BigDecimal price;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tax_category", nullable = false, length = 20)
@@ -71,11 +73,11 @@ public abstract class CatalogItemDomain {
         this.imageUrl = imageUrl;
     }
 
-    public Integer getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(final Integer price) {
+    public void setPrice(final BigDecimal price) {
         this.price = price;
     }
 

@@ -1,5 +1,6 @@
 package com.uco.ucopetinventory.messaging;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -81,10 +82,12 @@ class InventoryReceiversTest {
         ProductDomain created = waitFor(() -> productRepository.findById(itemId))
                 .orElseThrow(() -> new AssertionError("el alta no llego a la base en " + TIMEOUT));
         assertThat(created.getActive()).isTrue();
-        assertThat(created.getPrice()).isEqualTo(7700);
+        assertThat(created.getPrice()).isEqualByComparingTo("7700");
 
         publish("inventory.product.save", product(named("Producto por el bus"), 9900));
-        assertThat(waitFor(() -> productRepository.findById(itemId).filter(item -> item.getPrice() == 9900)))
+        BigDecimal updatedPrice = new BigDecimal("9900");
+        assertThat(waitFor(() -> productRepository.findById(itemId)
+                .filter(item -> item.getPrice().compareTo(updatedPrice) == 0)))
                 .as("el segundo save tiene que actualizar el precio")
                 .isPresent();
     }
@@ -97,6 +100,17 @@ class InventoryReceiversTest {
         assertThat(waitFor(() -> productRepository.findById(itemId)))
                 .map(ProductDomain::getName)
                 .contains(named("Arnés de ñandú"));
+    }
+
+    @Test
+    @DisplayName("el precio guarda los centavos tal cual")
+    void productSave_keepsTwoDecimals() {
+        publish("inventory.product.save", product(named("Producto con centavos"), 7700)
+                .replace("\"price\":7700", "\"price\":25000.50"));
+
+        ProductDomain created = waitFor(() -> productRepository.findById(itemId))
+                .orElseThrow(() -> new AssertionError("el alta no llego a la base en " + TIMEOUT));
+        assertThat(created.getPrice()).isEqualByComparingTo("25000.50");
     }
 
     @Test
