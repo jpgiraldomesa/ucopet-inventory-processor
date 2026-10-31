@@ -48,78 +48,75 @@ verifican la fila en la base. Por eso necesitan **Postgres y Rabbit arriba**, ig
 > **No dejes el procesador corriendo mientras pruebas.** Si `bootRun` esta activo, hay dos
 > consumidores sobre la misma cola y los mensajes se reparten: la prueba puede no ver el suyo.
 
-**Se limpian solas:** borran el item y la marca de procesado que crearon, y la prueba del comando
-fallido **consume** el mensaje de la cola de descarte al verificarlo. Verificado con corridas
-seguidas: la base y las dos colas quedan en cero.
+**Se limpian solas:** borran el item, su stock y la sede de prueba que crearon. Como en el equipo las
+colas las declara la API, la prueba declara las suyas en `InventoryTestQueues`.
 
 Por que no Testcontainers: con **Docker 29.8.2** y **Testcontainers 1.21.3** el socket responde
 `400 Bad Request` a las dos estrategias de deteccion, asi que no arranca contenedores. Si en algun
 momento eso se arregla, es el camino preferible.
 
-## Los comandos que atiende
+## Los mensajes que atiende
 
-**Cinco colas con el patron del equipo** (`save` para crear y editar, `deactivate` para dar de baja),
-cada una con su exchange `direct`, su cola y su routing key, como el procesador Comercial:
+Sigue el mismo molde que los procesadores de Salud, Usuarios, Comercial y Pagos, y que el repo base
+del profesor: **una clase receptora por cola**, el **JSON de la entidad** como cuerpo y el header
+`idMensaje`.
 
-| Cola | Comandos |
-|---|---|
-| `ucopet.inventory.product.save.qu` | `inventory.product.create` · `inventory.product.update` |
-| `ucopet.inventory.product.deactivate.qu` | `inventory.product.deactivate` |
-| `ucopet.inventory.service.save.qu` | `inventory.service.create` · `inventory.service.update` |
-| `ucopet.inventory.service.deactivate.qu` | `inventory.service.deactivate` |
-| `ucopet.inventory.stock.adjust.qu` | `inventory.stock.adjust` |
+| Cola | Receptor | Que hace |
+|---|---|---|
+| `ucopet.inventory.product.save.qu` | `messaging/product/ProductSaveReceiverMessage` | `save`: si el producto existe lo actualiza, si no lo crea |
+| `ucopet.inventory.product.deactivate.qu` | `messaging/product/ProductDeactivationReceiverMessage` | lo da de baja |
+| `ucopet.inventory.service.save.qu` | `messaging/product/ServiceSaveReceiverMessage` | `save` del servicio, con sus sedes |
+| `ucopet.inventory.service.deactivate.qu` | `messaging/product/ServiceDeactivationReceiverMessage` | lo da de baja |
+| `ucopet.inventory.stock.adjust.qu` | `messaging/product/StockAdjustReceiverMessage` | suma o resta; nunca deja el stock en negativo |
 
-Las cinco mandan lo que falla a `ucopet.inventory.dlx`, que lo deja en **una sola** cola de descarte,
-`ucopet.inventory.dlq`. Un solo listener escucha las cinco y decide por el `type` del sobre.
+Cada cola tiene su exchange `direct` y su routing key, con los nombres de
+`src/main/resources/inventory.properties`, que entra por `spring.config.import`. **Las colas las
+declara la API** (`config/product/*QueueConfig` en `ucopetapi`); el procesador solo escucha, y con
+`missing-queues-fatal=false` arranca aunque la API todavia no las haya creado.
 
-Los nombres salen de `src/main/resources/inventory.properties`, enlazados al record
-`InventoryQueueProperties` y declarados por `RabbitTopology` — asi no hace falta tocar
-`application.properties`.
-
-```
-inventory.product.create       inventory.service.create
-inventory.product.update       inventory.service.update
-inventory.product.deactivate   inventory.service.deactivate
-inventory.stock.adjust
-```
-
-El cuerpo es un sobre comun:
+El cuerpo es el mismo DTO que maneja la API (`ProductDTO`, `ServiceDTO`), y entra directo a `ProductDomain` o
+`ServiceDomain`:
 
 ```json
-{
-  "eventId": "uuid",
-  "type": "inventory.product.create",
-  "version": 1,
-  "occurredAt": "2026-10-10T20:15:00Z",
-  "correlationId": "el jti del token que disparo la accion",
-  "producer": "api",
-  "data": { "id": "uuid", "name": "Collar rojo", "price": 25000,
-            "taxCategory": "STANDARD", "sellable": true, "category": "GENERAL" }
-}
+{ "id": "uuid", "name": "Collar rojo", "price": 25000,
+  "taxCategory": "STANDARD", "sellable": true, "active": true, "category": "GENERAL" }
 ```
 
-**El `id` lo asigna la API antes de publicar.** Si llega sin `id`, el comando se rechaza: el
+Un servicio trae ademas `purchasable` y `headquarterIds`. Las bajas mandan el item actual; el procesador solo usa
+su `id`.
+
+Para el stock: `{ "productId": "uuid", "headquarterId": "uuid", "quantity": -3, "reason": "SALE", "note": "...",
+"performedBy": "uuid" }`, que entra directo a `StockMovementDomain`. Cada ajuste actualiza `stocks` y deja una fila en
+`stock_movements` (el historial: cantidad, saldo que quedo, motivo, nota, quien y cuando) en la misma transaccion. Si
+el saldo existia antes del historial, primero se guarda un movimiento `OPENING` con lo que habia.
+
+**El `id` lo asigna la API antes de publicar.** Si llega sin `id`, el mensaje se rechaza: el
 procesador escribe tarde y la API necesita responder con el id de inmediato.
 
-## Las tres garantias
+**La API espera la respuesta** al guardar, dar de baja y ajustar stock (request-reply de Rabbit, con
+`sendAndReceive`). Si el mensaje trae `replyTo`, el receptor contesta con headers: `resultado` (`aplicado` o
+`rechazado`), `motivo`, `tipo=nombre-repetido` cuando choca el indice de nombre unico, y en el stock `cantidad` y
+`stockId`. Cada receptor procesa de a un mensaje (`concurrency = "1"`) y el stock se ajusta con `@Lock` sobre el
+producto, asi que dos ajustes nunca se pisan.
 
-1. **Idempotencia.** Rabbit entrega *al menos una vez*. Cada comando se reclama en
-   `inventory_processed_messages` con `INSERT ... ON CONFLICT DO NOTHING`; si ya estaba, se descarta.
-2. **Nada se pierde en silencio.** La excepcion sale del listener; la cola tiene
-   `x-dead-letter-exchange`, asi que el mensaje fallido va a `ucopet.inventory.dlq`.
-3. **La marca y la escritura van en la misma transaccion.** Si la escritura falla, la marca se
-   deshace y el comando se puede reintentar.
+**El header `plazo`** trae la hora limite en que la API deja de esperar. El cambio corre en un `TransactionTemplate`
+y, justo antes de confirmar, si el plazo ya vencio se deshace: un 503 de la API siempre significa que no se aplico.
+
+**Si un mensaje no se puede aplicar** (JSON invalido, sin id, un stock que quedaria negativo) y no trae `replyTo`,
+el receptor lanza `AmqpRejectAndDontRequeueException`: se descarta y no se reintenta, igual que en el resto del
+equipo.
 
 ## Estructura
 
-Sigue la convencion del equipo, **capa primero y entidad despues**, con el codigo **en ingles**, y
-el cableado de Rabbit de la referencia del profesor con los nombres que el equipo ya usa en
-`ucopetapi`: `messaging/inventory/ReceiverMessagesBroker`, el record `config/InventoryQueueProperties`
-(la misma forma que `CommercialQueueProperties`) y `util/gson/MapperJsonObject`. El listener recibe
-el `Message` y lee el cuerpo en UTF-8, porque la API lo manda como `application/json`.
+Capa primero y entidad despues, con el codigo **en ingles**: `messaging/product`, `service/product`,
+`repository/product`, `domain/product` (productos, servicios y stock) y `util/gson/MapperJsonObject`.
+**No hay DTO:** como en el resto del equipo, el receptor convierte el JSON directo al domain
+(`ProductDomain`, `ServiceDomain`, `StockDomain`, `StockMovementDomain`), con lo comun en `CatalogItemDomain`
+(`@MappedSuperclass`). Las sedes de un servicio llegan en `headquarterIds`, un campo `@Transient` de
+`ServiceDomain`, porque se guardan en `service_headquarters`.
 
 ## Alcance actual
 
-Los **7 comandos de `product`** (catalogo y stock). El dominio de inventario tambien incluye
-**sedes** y **traslados**, que son de otros integrantes: se agregan con un `case` en
-`ReceiverMessagesBroker` y su servicio.
+Productos, servicios y stock. El dominio de inventario tambien incluye **sedes** y **traslados**,
+que son de otros integrantes: cada uno suma sus colas a `inventory.properties` y sus propias clases
+receptoras, sin tocar estas.
