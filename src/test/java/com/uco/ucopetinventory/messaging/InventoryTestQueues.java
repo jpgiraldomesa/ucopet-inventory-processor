@@ -21,7 +21,10 @@ public class InventoryTestQueues {
             "inventory.product.deactivate",
             "inventory.service.save",
             "inventory.service.deactivate",
-            "inventory.stock.adjust");
+            "inventory.stock.adjust",
+            "inventory.transfer.save",
+            "inventory.transfer.status",
+            "inventory.transfer.cancel");
 
     @Bean
     public Declarables inventoryQueues(Environment environment) {
