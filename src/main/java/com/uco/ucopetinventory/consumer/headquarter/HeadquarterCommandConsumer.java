@@ -7,7 +7,7 @@ import com.uco.ucopetinventory.command.headquarter.DeactivateHeadquarterCommand;
 import com.uco.ucopetinventory.command.headquarter.SaveHeadquarterCommand;
 import com.uco.ucopetinventory.config.InstantTypeAdapter;
 import com.uco.ucopetinventory.exception.headquarter.BusinessException;
-import com.uco.ucopetinventory.service.HeadquarterProcessorService;
+import com.uco.ucopetinventory.service.headquarter.HeadquarterProcessorService;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
