@@ -1,7 +1,5 @@
 package com.uco.ucopetinventory.consumer.headquarter;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.uco.ucopetinventory.command.headquarter.DeactivateHeadquarterCommand;
 import com.uco.ucopetinventory.command.headquarter.SaveHeadquarterCommand;
 import com.uco.ucopetinventory.exception.headquarter.BusinessException;
@@ -13,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 
 @Component
 public class HeadquarterCommandConsumer {
