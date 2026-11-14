@@ -93,8 +93,4 @@ public class HeadquarterTopologyConfig {
                 .to(deadLetterExchange()).with(DEACTIVATE_DLQ);
     }
 
-    @Bean
-    public MessageConverter jsonMessageConverter() {
-        return new JacksonJsonMessageConverter();
-    }
 }
