@@ -35,7 +35,7 @@ public class HeadquarterCommandConsumer {
                        @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
 
         procesar(channel, deliveryTag,
-                () -> service.procesarSave(leer(payload, SaveHeadquarterCommand.class)));
+                () -> service.proccessSave(leer(payload, SaveHeadquarterCommand.class)));
     }
 
     @RabbitListener(queues = "${inventory.headquarter.deactivate.queue-name}")
@@ -44,7 +44,7 @@ public class HeadquarterCommandConsumer {
                              @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
 
         procesar(channel, deliveryTag,
-                () -> service.procesarDeactivate(leer(payload, DeactivateHeadquarterCommand.class)));
+                () -> service.proccessDeactivate(leer(payload, DeactivateHeadquarterCommand.class)));
     }
 
     private <T> T leer(String payload, Class<T> tipo) {
