@@ -2,18 +2,17 @@ package com.uco.ucopetinventory.consumer.headquarter;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.rabbitmq.client.Channel;
 import com.uco.ucopetinventory.command.headquarter.DeactivateHeadquarterCommand;
 import com.uco.ucopetinventory.command.headquarter.SaveHeadquarterCommand;
-import com.uco.ucopetinventory.config.InstantTypeAdapter;
+import com.uco.ucopetinventory.config.headquarter.InstantTypeAdapter;
 import com.uco.ucopetinventory.exception.headquarter.BusinessException;
 import com.uco.ucopetinventory.service.headquarter.HeadquarterProcessorService;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.support.AmqpHeaders;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 @Component
@@ -30,37 +29,23 @@ public class HeadquarterCommandConsumer {
     }
 
     @RabbitListener(queues = "${inventory.headquarter.save.queue-name}")
-    public void onSave(String payload,
-                       Channel channel,
-                       @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
-
-        procesar(channel, deliveryTag,
-                () -> service.proccessSave(leer(payload, SaveHeadquarterCommand.class)));
+    @Transactional
+    public void onSave(Message message) {
+        service.proccessSave(leer(message, SaveHeadquarterCommand.class));
     }
 
     @RabbitListener(queues = "${inventory.headquarter.deactivate.queue-name}")
-    public void onDeactivate(String payload,
-                             Channel channel,
-                             @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
-
-        procesar(channel, deliveryTag,
-                () -> service.proccessDeactivate(leer(payload, DeactivateHeadquarterCommand.class)));
+    @Transactional
+    public void onDeactivate(Message message) {
+        service.proccessDeactivate(leer(message, DeactivateHeadquarterCommand.class));
     }
 
-    private <T> T leer(String payload, Class<T> tipo) {
-        T command = GSON.fromJson(payload, tipo);
+    private <T> T leer(Message message, Class<T> tipo) {
+        String body = new String(message.getBody(), StandardCharsets.UTF_8);
+        T command = GSON.fromJson(body, tipo);
         if (command == null) {
-            throw new BusinessException("Mensaje vacío o ilegible");
+            throw new BusinessException("Mensaje vacio o ilegible");
         }
         return command;
-    }
-
-    private void procesar(Channel channel, long deliveryTag, Runnable accion) throws IOException {
-        try {
-            accion.run();
-            channel.basicAck(deliveryTag, false);
-        } catch (Exception e) {
-            channel.basicNack(deliveryTag, false, false);
-        }
     }
 }
