@@ -21,7 +21,7 @@ public class HeadquarterCommandConsumer {
         this.service = service;
     }
 
-    @RabbitListener(queues = "${inventory.headquarter.save.queue-name}")
+    @RabbitListener(queues = "${inventory.headquarter.save.queue-name}", ackMode = "MANUAL")
     public void onSave(@Payload SaveHeadquarterCommand command,
                        Channel channel,
                        @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
@@ -29,7 +29,7 @@ public class HeadquarterCommandConsumer {
         proccess(channel,deliveryTag, () -> service.proccessSave(command));
     }
 
-    @RabbitListener(queues = "${inventory.headquarter.deactivate.queue-name}")
+    @RabbitListener(queues = "${inventory.headquarter.deactivate.queue-name}", ackMode = "MANUAL")
     public void onDeactivate(@Payload DeactivateHeadquarterCommand command,
                        Channel channel,
                        @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
